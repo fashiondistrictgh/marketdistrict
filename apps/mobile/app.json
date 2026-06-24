@@ -42,8 +42,10 @@
     },
     "extra": {
       "eas": {
-        "projectId": ""
-      }
-    }
+        "projectId": "08545406-7644-4bd0-9727-a6c962f670bd"
+      },
+      "router": {}
+    },
+    "owner": "marketdistrictgh"
   }
 }
