@@ -13,7 +13,10 @@ import { PromoCarousel } from "@/components/home/PromoCarousel";
 import { useProducts } from "@/hooks/useProducts";
 import { useCategories } from "@/hooks/useCategories";
 import { useUnreadCount } from "@/hooks/useActivity";
+import { useAddresses } from "@/hooks/useAddresses";
 import { useAuthStore } from "@/store/auth-store";
+import { useAppStore } from "@/store/app-store";
+import { ChevronDown } from "lucide-react-native";
 import { colors } from "@/constants/colors";
 
 const CATEGORY_EMOJI: Record<string, string> = {
@@ -47,6 +50,17 @@ export default function HomeScreen() {
   const newArrivals = useMemo(() => products.slice(0, 8), [products]);
   const firstName = (user?.fullName ?? user?.email ?? "there").split(/[\s@]/)[0];
 
+  // Active delivery address: the selected one, else the default, else the first.
+  const { data: addresses = [] } = useAddresses();
+  const selectedId = useAppStore((s) => s.selectedAddressId);
+  const activeAddress =
+    addresses.find((a) => a.id === selectedId) ??
+    addresses.find((a) => a.isDefault) ??
+    addresses[0];
+  const deliverLabel = activeAddress
+    ? `${activeAddress.label ?? activeAddress.line1}`
+    : "Set delivery address";
+
   return (
     <View className="flex-1 bg-surface">
       <StatusBar style="light" />
@@ -61,13 +75,16 @@ export default function HomeScreen() {
         <SafeAreaView edges={["top"]}>
           <View className="px-5 pb-6 pt-2">
             <View className="flex-row items-center justify-between">
-              <View>
+              <Pressable onPress={() => router.push("/profile/saved-addresses")} className="flex-1">
                 <Text className="text-xs text-white/80">Deliver to</Text>
                 <View className="flex-row items-center gap-1">
                   <MapPin size={14} color="#fff" />
-                  <Text className="text-base font-semibold text-white">Home</Text>
+                  <Text numberOfLines={1} className="max-w-[200px] text-base font-semibold text-white">
+                    {deliverLabel}
+                  </Text>
+                  <ChevronDown size={16} color="#fff" />
                 </View>
-              </View>
+              </Pressable>
               <Pressable
                 onPress={() => router.push("/profile/notifications")}
                 className="h-10 w-10 items-center justify-center rounded-full bg-white/15"

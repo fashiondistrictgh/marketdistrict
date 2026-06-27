@@ -1,6 +1,7 @@
 import { useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -17,6 +18,7 @@ import { ArrowLeft, LocateFixed, MapPin, Plus, Trash2 } from "lucide-react-nativ
 
 import { useAddresses, useAddAddress, useDeleteAddress } from "@/hooks/useAddresses";
 import { useCurrentLocation } from "@/hooks/useCurrentLocation";
+import { useAppStore } from "@/store/app-store";
 import { colors } from "@/constants/colors";
 
 export default function SavedAddressesScreen() {
@@ -24,6 +26,8 @@ export default function SavedAddressesScreen() {
   const addAddress = useAddAddress();
   const deleteAddress = useDeleteAddress();
   const { detect, loading: locating } = useCurrentLocation();
+  const selectedId = useAppStore((s) => s.selectedAddressId);
+  const setSelectedAddress = useAppStore((s) => s.setSelectedAddress);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [label, setLabel] = useState("");
@@ -58,7 +62,10 @@ export default function SavedAddressesScreen() {
       setCity("");
       setModalOpen(false);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not save address.");
+      // Surface the real error unmistakably so issues aren't silent.
+      const msg = e instanceof Error ? e.message : "Could not save address.";
+      setError(msg);
+      Alert.alert("Couldn't save address", msg);
     }
   }
 
@@ -93,10 +100,18 @@ export default function SavedAddressesScreen() {
               </Text>
             </View>
           ) : (
-            addresses.map((a) => (
-              <View
+            addresses.map((a) => {
+              const isActive = selectedId === a.id || (!selectedId && a.isDefault);
+              return (
+              <Pressable
                 key={a.id}
-                className="mb-3 flex-row items-start gap-3 rounded-2xl bg-white p-4"
+                onPress={() => {
+                  setSelectedAddress(a.id);
+                  router.back();
+                }}
+                className={`mb-3 flex-row items-start gap-3 rounded-2xl border-2 bg-white p-4 ${
+                  isActive ? "border-primary" : "border-transparent"
+                }`}
               >
                 <View className="h-10 w-10 items-center justify-center rounded-full bg-primary/10">
                   <MapPin size={18} color={colors.primary} />
@@ -104,7 +119,11 @@ export default function SavedAddressesScreen() {
                 <View className="flex-1">
                   <View className="flex-row items-center gap-2">
                     <Text className="font-semibold text-gray-900">{a.label ?? "Address"}</Text>
-                    {a.isDefault ? (
+                    {isActive ? (
+                      <View className="rounded-full bg-primary px-2 py-0.5">
+                        <Text className="text-[10px] font-bold text-white">SELECTED</Text>
+                      </View>
+                    ) : a.isDefault ? (
                       <View className="rounded-full bg-primary/10 px-2 py-0.5">
                         <Text className="text-[10px] font-bold text-primary">DEFAULT</Text>
                       </View>
@@ -115,11 +134,18 @@ export default function SavedAddressesScreen() {
                     {a.city ? `, ${a.city}` : ""}
                   </Text>
                 </View>
-                <Pressable onPress={() => deleteAddress.mutate(a.id)} hitSlop={8}>
+                <Pressable
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    deleteAddress.mutate(a.id);
+                  }}
+                  hitSlop={8}
+                >
                   <Trash2 size={18} color="#dc2626" />
                 </Pressable>
-              </View>
-            ))
+              </Pressable>
+              );
+            })
           )}
 
           <Pressable

@@ -19,6 +19,7 @@ import { usePlaceOrder } from "@/hooks/usePlaceOrder";
 import { usePaystack } from "@/hooks/usePaystack";
 import { useAddresses } from "@/hooks/useAddresses";
 import { useAuthStore } from "@/store/auth-store";
+import { useAppStore } from "@/store/app-store";
 import { colors } from "@/constants/colors";
 
 const DELIVERY_FEE = 8;
@@ -34,10 +35,14 @@ export default function CheckoutScreen() {
   const placeOrder = usePlaceOrder();
   const { pay, isPaying } = usePaystack();
   const { data: savedAddresses = [] } = useAddresses();
+  const homeSelectedId = useAppStore((s) => s.selectedAddressId);
 
   const [address, setAddress] = useState("");
   const [phone, setPhone] = useState(user?.phone ?? "");
-  const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
+  // Default the checkout address to whatever was selected on home / the default.
+  const [selectedAddressId, setSelectedAddressId] = useState<string | null>(
+    homeSelectedId ?? savedAddresses.find((a) => a.isDefault)?.id ?? null,
+  );
   const [useNewAddress, setUseNewAddress] = useState(false);
   const [method, setMethod] = useState<PayMethod>("cash_on_delivery");
   const [error, setError] = useState<string | null>(null);

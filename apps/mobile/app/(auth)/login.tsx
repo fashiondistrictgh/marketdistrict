@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -19,6 +19,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { getErrorMessage } from "@/lib/helpers";
 
 const OTP_LENGTH = 6;
+const RESEND_SECONDS = 60;
 
 function normalizePhone(raw: string): string {
   let p = raw.replace(/[\s-()]/g, "");
@@ -34,7 +35,15 @@ export default function LoginScreen() {
   const [digits, setDigits] = useState<string[]>(Array(OTP_LENGTH).fill(""));
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [resendIn, setResendIn] = useState(0);
   const inputs = useRef<(TextInput | null)[]>([]);
+
+  // Resend cooldown countdown.
+  useEffect(() => {
+    if (resendIn <= 0) return;
+    const t = setTimeout(() => setResendIn((s) => s - 1), 1000);
+    return () => clearTimeout(t);
+  }, [resendIn]);
 
   async function onSendOtp() {
     const norm = normalizePhone(phone);
@@ -53,6 +62,7 @@ export default function LoginScreen() {
         return;
       }
       setStep("otp");
+      setResendIn(RESEND_SECONDS); // start the cooldown
     } catch (e) {
       setError(getErrorMessage(e));
     } finally {
@@ -153,8 +163,21 @@ export default function LoginScreen() {
               {error ? <Text className="mb-3 text-sm text-red-500">{error}</Text> : null}
               <AppButton label="Verify & sign in" loading={loading} onPress={onVerify} />
 
-              <Pressable className="mt-6" onPress={onSendOtp} disabled={loading}>
-                <Text className="text-center text-sm font-medium text-primary">Resend code</Text>
+              <Pressable
+                className="mt-6"
+                onPress={onSendOtp}
+                disabled={loading || resendIn > 0}
+              >
+                {resendIn > 0 ? (
+                  <Text className="text-center text-sm text-gray-400">
+                    Resend code in {Math.floor(resendIn / 60)}:
+                    {String(resendIn % 60).padStart(2, "0")}
+                  </Text>
+                ) : (
+                  <Text className="text-center text-sm font-semibold text-primary">
+                    Resend code
+                  </Text>
+                )}
               </Pressable>
             </>
           )}
