@@ -1,14 +1,7 @@
-import { Text, View } from "react-native";
+import { Redirect } from "expo-router";
 
-import { ScreenWrapper } from "@/components/common/ScreenWrapper";
-
-export default function Screen() {
-  return (
-    <ScreenWrapper>
-      <View className="flex-1 items-center justify-center">
-        <Text className="text-lg font-semibold text-gray-900">Order tracking</Text>
-        <Text className="mt-1 text-sm text-gray-500">Screen placeholder</Text>
-      </View>
-    </ScreenWrapper>
-  );
+// Order tracking lives inside the order detail screen (status timeline).
+// This route just redirects to the orders list for any legacy links.
+export default function OrderTrackingRedirect() {
+  return <Redirect href="/orders" />;
 }

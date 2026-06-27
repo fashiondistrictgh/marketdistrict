@@ -1,6 +1,7 @@
 import { Image, Pressable, Text, View } from "react-native";
 import { router } from "expo-router";
 import { Heart, Plus } from "lucide-react-native";
+import Animated, { FadeInDown } from "react-native-reanimated";
 import type { Product } from "@/shared";
 import { discountPercent, formatCurrency } from "@/shared";
 
@@ -8,12 +9,16 @@ import { productImageUrl } from "@/lib/product-image";
 import { useCartStore } from "@/store/cart-store";
 import { useWishlistStore } from "@/store/wishlist-store";
 
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
 interface ProductCardProps {
   product: Product;
   width?: number;
+  /** Index for a staggered entrance animation in grids. */
+  index?: number;
 }
 
-export function ProductCard({ product, width }: ProductCardProps) {
+export function ProductCard({ product, width, index = 0 }: ProductCardProps) {
   const addItem = useCartStore((s) => s.addItem);
   const wishlisted = useWishlistStore((s) => s.ids.includes(product.id));
   const toggleWishlist = useWishlistStore((s) => s.toggle);
@@ -21,7 +26,8 @@ export function ProductCard({ product, width }: ProductCardProps) {
   const outOfStock = product.stockQuantity <= 0;
 
   return (
-    <Pressable
+    <AnimatedPressable
+      entering={FadeInDown.delay(Math.min(index, 8) * 60).duration(380)}
       onPress={() => router.push(`/product/${product.id}`)}
       style={width ? { width } : undefined}
       className="mb-3 rounded-3xl border border-gray-100 bg-white p-2.5"
@@ -103,6 +109,6 @@ export function ProductCard({ product, width }: ProductCardProps) {
           ) : null}
         </View>
       </View>
-    </Pressable>
+    </AnimatedPressable>
   );
 }

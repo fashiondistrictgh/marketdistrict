@@ -11,12 +11,13 @@ import {
 import { Stack, router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { ArrowLeft, Banknote, CreditCard, MapPin } from "lucide-react-native";
+import { ArrowLeft, Banknote, Check, CreditCard, MapPin, Plus } from "lucide-react-native";
 import { formatCurrency } from "@/shared";
 
 import { useCartStore } from "@/store/cart-store";
 import { usePlaceOrder } from "@/hooks/usePlaceOrder";
 import { usePaystack } from "@/hooks/usePaystack";
+import { useAddresses } from "@/hooks/useAddresses";
 import { useAuthStore } from "@/store/auth-store";
 import { colors } from "@/constants/colors";
 
@@ -32,18 +33,28 @@ export default function CheckoutScreen() {
   const user = useAuthStore((s) => s.user);
   const placeOrder = usePlaceOrder();
   const { pay, isPaying } = usePaystack();
+  const { data: savedAddresses = [] } = useAddresses();
 
   const [address, setAddress] = useState("");
   const [phone, setPhone] = useState(user?.phone ?? "");
+  const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
+  const [useNewAddress, setUseNewAddress] = useState(false);
   const [method, setMethod] = useState<PayMethod>("cash_on_delivery");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  // The effective delivery address: a chosen saved one, or the typed text.
+  const chosen = savedAddresses.find((a) => a.id === selectedAddressId);
+  const effectiveAddress = chosen
+    ? `${chosen.label ? chosen.label + ": " : ""}${chosen.line1}, ${chosen.city}`
+    : address;
 
   const deliveryFee = subtotal >= FREE_DELIVERY_THRESHOLD ? 0 : DELIVERY_FEE;
   const total = subtotal + deliveryFee;
 
   async function onPlaceOrder() {
-    if (address.trim().length < 6) return setError("Please enter a full delivery address.");
+    if (effectiveAddress.trim().length < 6)
+      return setError("Please select or enter a delivery address.");
     if (phone.trim().length < 7) return setError("Please enter a valid phone number.");
     setError(null);
     setBusy(true);
@@ -52,7 +63,7 @@ export default function CheckoutScreen() {
         items,
         subtotal,
         deliveryFee,
-        deliveryAddress: address.trim(),
+        deliveryAddress: effectiveAddress.trim(),
         phone: phone.trim(),
         paymentMethod: method,
       });
@@ -119,14 +130,69 @@ export default function CheckoutScreen() {
               <MapPin size={18} color={colors.primary} />
               <Text className="text-base font-bold text-gray-900">Delivery address</Text>
             </View>
-            <TextInput
-              value={address}
-              onChangeText={setAddress}
-              placeholder="House number, street, area, city"
-              placeholderTextColor="#9ca3af"
-              multiline
-              className="min-h-12 rounded-xl border border-gray-200 bg-white px-4 py-3 text-base text-gray-900"
-            />
+
+            {/* Saved addresses (tap to select) */}
+            {savedAddresses.length > 0 && !useNewAddress ? (
+              <View className="gap-2">
+                {savedAddresses.map((a) => {
+                  const selected = selectedAddressId === a.id;
+                  return (
+                    <Pressable
+                      key={a.id}
+                      onPress={() => setSelectedAddressId(a.id)}
+                      className={`flex-row items-center gap-3 rounded-xl border-2 p-3 ${
+                        selected ? "border-primary bg-primary/5" : "border-gray-200 bg-white"
+                      }`}
+                    >
+                      <View className="flex-1">
+                        <Text className="text-sm font-semibold text-gray-900">
+                          {a.label ?? "Address"}
+                        </Text>
+                        <Text className="text-xs text-gray-500">
+                          {a.line1}, {a.city}
+                        </Text>
+                      </View>
+                      {selected ? (
+                        <View className="h-5 w-5 items-center justify-center rounded-full bg-primary">
+                          <Check size={12} color="#fff" strokeWidth={3} />
+                        </View>
+                      ) : (
+                        <View className="h-5 w-5 rounded-full border-2 border-gray-300" />
+                      )}
+                    </Pressable>
+                  );
+                })}
+                <Pressable
+                  onPress={() => {
+                    setUseNewAddress(true);
+                    setSelectedAddressId(null);
+                  }}
+                  className="mt-1 flex-row items-center gap-1.5"
+                >
+                  <Plus size={16} color={colors.primary} />
+                  <Text className="text-sm font-semibold text-primary">Use a different address</Text>
+                </Pressable>
+              </View>
+            ) : (
+              <>
+                <TextInput
+                  value={address}
+                  onChangeText={setAddress}
+                  placeholder="House number, street, area, city"
+                  placeholderTextColor="#9ca3af"
+                  multiline
+                  className="min-h-12 rounded-xl border border-gray-200 bg-white px-4 py-3 text-base text-gray-900"
+                />
+                {savedAddresses.length > 0 ? (
+                  <Pressable onPress={() => setUseNewAddress(false)} className="mt-2">
+                    <Text className="text-sm font-semibold text-primary">
+                      ← Choose a saved address
+                    </Text>
+                  </Pressable>
+                ) : null}
+              </>
+            )}
+
             <TextInput
               value={phone}
               onChangeText={setPhone}

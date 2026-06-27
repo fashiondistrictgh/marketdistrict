@@ -24,13 +24,8 @@ export const ROUTES = {
   orderDetail: (id: string) => `/orders/${id}`,
   orderTracking: "/orders/tracking",
 
-  // Checkout
+  // Checkout (single-screen checkout + result screens)
   checkout: "/checkout",
-  checkoutAddress: "/checkout/address",
-  checkoutDelivery: "/checkout/delivery-option",
-  checkoutPayment: "/checkout/payment",
-  checkoutReview: "/checkout/review",
-  checkoutProcessing: "/checkout/processing",
   checkoutSuccess: "/checkout/success",
   checkoutFailed: "/checkout/failed",
 

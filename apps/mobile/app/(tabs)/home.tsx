@@ -167,9 +167,9 @@ export default function HomeScreen() {
             </View>
           ) : (
             <View className="mt-4 flex-row flex-wrap justify-between">
-              {products.map((p) => (
+              {products.map((p, i) => (
                 <View key={p.id} style={{ width: "48%" }}>
-                  <ProductCard product={p} />
+                  <ProductCard product={p} index={i} />
                 </View>
               ))}
             </View>

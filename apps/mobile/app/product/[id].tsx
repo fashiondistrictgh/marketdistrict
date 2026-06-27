@@ -257,7 +257,15 @@ function IconButton({ onPress, children }: { onPress: () => void; children: Reac
   return (
     <Pressable
       onPress={onPress}
-      className="h-10 w-10 items-center justify-center rounded-full bg-white/90 shadow"
+      hitSlop={8}
+      className="h-11 w-11 items-center justify-center rounded-full bg-white shadow-lg active:opacity-80"
+      style={{
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.18,
+        shadowRadius: 6,
+        elevation: 5,
+      }}
     >
       {children}
     </Pressable>

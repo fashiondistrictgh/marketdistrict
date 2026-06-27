@@ -52,6 +52,11 @@ Deno.serve(async (req) => {
       amount: amountMinor,
       currency: "GHS",
       reference,
+      // Only card + mobile money (hides Apple Pay, bank, USSD, QR, etc.)
+      channels: ["card", "mobile_money"],
+      // After payment Paystack redirects here; the app intercepts this deep link
+      // and closes the browser automatically.
+      callback_url: "marketdistrict://payment-callback",
       metadata: { orderId: body.orderId },
     }),
   });
