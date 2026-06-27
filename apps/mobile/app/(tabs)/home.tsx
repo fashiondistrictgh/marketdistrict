@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
+import { Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
 import { router } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { StatusBar } from "expo-status-bar";
@@ -7,6 +7,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Bell, MapPin, Search } from "lucide-react-native";
 
 import { ProductCard } from "@/components/products/ProductCard";
+import { ProductCardSkeleton } from "@/components/products/ProductCardSkeleton";
 import { PromoCarousel } from "@/components/home/PromoCarousel";
 import { useProducts } from "@/hooks/useProducts";
 import { useCategories } from "@/hooks/useCategories";
@@ -30,8 +31,13 @@ const CATEGORY_EMOJI: Record<string, string> = {
 
 export default function HomeScreen() {
   const user = useAuthStore((s) => s.user);
-  const { data: products = [], isLoading } = useProducts();
-  const { data: categories = [] } = useCategories();
+  const { data: products = [], isLoading, refetch, isRefetching } = useProducts();
+  const { data: categories = [], refetch: refetchCategories } = useCategories();
+
+  function onRefresh() {
+    refetch();
+    refetchCategories();
+  }
 
   // New arrivals = most recently added products (hook returns newest-first).
   const newArrivals = useMemo(() => products.slice(0, 8), [products]);
@@ -42,9 +48,14 @@ export default function HomeScreen() {
       <StatusBar style="light" />
 
       {/* Header */}
-      <LinearGradient colors={[colors.primaryLight, colors.primary]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+      <LinearGradient
+        colors={[colors.primaryLight, colors.primary]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={{ borderBottomLeftRadius: 28, borderBottomRightRadius: 28 }}
+      >
         <SafeAreaView edges={["top"]}>
-          <View className="px-5 pb-5 pt-2">
+          <View className="px-5 pb-6 pt-2">
             <View className="flex-row items-center justify-between">
               <View>
                 <Text className="text-xs text-white/80">Deliver to</Text>
@@ -76,7 +87,18 @@ export default function HomeScreen() {
         </SafeAreaView>
       </LinearGradient>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 110 }}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 110 }}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefetching}
+            onRefresh={onRefresh}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
+          />
+        }
+      >
         {/* Promo slideshow (above categories) */}
         <View className="mt-5">
           <PromoCarousel />
@@ -131,8 +153,12 @@ export default function HomeScreen() {
         <View className="mt-7 px-5">
           <SectionHeader title="Popular near you" inset />
           {isLoading ? (
-            <View className="items-center py-12">
-              <ActivityIndicator color={colors.primary} />
+            <View className="mt-4 flex-row flex-wrap justify-between">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <View key={i} style={{ width: "48%" }}>
+                  <ProductCardSkeleton />
+                </View>
+              ))}
             </View>
           ) : products.length === 0 ? (
             <View className="mt-3 items-center rounded-2xl bg-white py-12">
