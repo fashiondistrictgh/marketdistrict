@@ -32,11 +32,11 @@ export default function RootLayout() {
             <Stack.Screen name="index" options={{ animation: "fade" }} />
             <Stack.Screen name="(auth)" options={{ animation: "fade_from_bottom" }} />
             <Stack.Screen name="(tabs)" options={{ animation: "fade" }} />
+            {/* Detail / flow routes (checkout/*, orders/*, profile/*) are
+                auto-discovered by Expo Router from the app/ folder; only the
+                two below need custom header options. */}
             <Stack.Screen name="product/[id]" options={{ headerShown: true, title: "Product" }} />
             <Stack.Screen name="category/[id]" options={{ headerShown: true, title: "Category" }} />
-            <Stack.Screen name="checkout" />
-            <Stack.Screen name="orders" />
-            <Stack.Screen name="profile" />
           </Stack>
         </QueryClientProvider>
       </SafeAreaProvider>

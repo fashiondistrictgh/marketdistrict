@@ -9,7 +9,7 @@ interface PlaceOrderInput {
   deliveryFee: number;
   deliveryAddress: string;
   phone: string;
-  paymentMethod: "cash_on_delivery";
+  paymentMethod: "cash_on_delivery" | "card";
 }
 
 /**
@@ -58,14 +58,17 @@ export function usePlaceOrder() {
         .insert(lineItems as never);
       if (itemsError) throw itemsError;
 
-      // Record a cash-on-delivery payment row (pending until delivered).
-      await supabase.from("payments").insert({
-        order_id: orderId,
-        method: "cash_on_delivery",
-        status: "pending",
-        amount: total,
-        currency: "GHS",
-      } as never);
+      // For cash-on-delivery, record a pending payment row now. For card, the
+      // initialize-payment edge function creates the payment row instead.
+      if (input.paymentMethod === "cash_on_delivery") {
+        await supabase.from("payments").insert({
+          order_id: orderId,
+          method: "cash_on_delivery",
+          status: "pending",
+          amount: total,
+          currency: "GHS",
+        } as never);
+      }
 
       qc.invalidateQueries({ queryKey: ["orders"] });
       return orderId;

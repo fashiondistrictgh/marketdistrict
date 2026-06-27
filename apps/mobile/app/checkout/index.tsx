@@ -11,16 +11,19 @@ import {
 import { Stack, router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { ArrowLeft, Banknote, MapPin } from "lucide-react-native";
+import { ArrowLeft, Banknote, CreditCard, MapPin } from "lucide-react-native";
 import { formatCurrency } from "@/shared";
 
 import { useCartStore } from "@/store/cart-store";
 import { usePlaceOrder } from "@/hooks/usePlaceOrder";
+import { usePaystack } from "@/hooks/usePaystack";
 import { useAuthStore } from "@/store/auth-store";
 import { colors } from "@/constants/colors";
 
 const DELIVERY_FEE = 8;
 const FREE_DELIVERY_THRESHOLD = 100;
+
+type PayMethod = "cash_on_delivery" | "card";
 
 export default function CheckoutScreen() {
   const items = useCartStore((s) => s.items);
@@ -28,10 +31,13 @@ export default function CheckoutScreen() {
   const clear = useCartStore((s) => s.clear);
   const user = useAuthStore((s) => s.user);
   const placeOrder = usePlaceOrder();
+  const { pay, isPaying } = usePaystack();
 
   const [address, setAddress] = useState("");
   const [phone, setPhone] = useState(user?.phone ?? "");
+  const [method, setMethod] = useState<PayMethod>("cash_on_delivery");
   const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
   const deliveryFee = subtotal >= FREE_DELIVERY_THRESHOLD ? 0 : DELIVERY_FEE;
   const total = subtotal + deliveryFee;
@@ -40,21 +46,49 @@ export default function CheckoutScreen() {
     if (address.trim().length < 6) return setError("Please enter a full delivery address.");
     if (phone.trim().length < 7) return setError("Please enter a valid phone number.");
     setError(null);
+    setBusy(true);
     try {
-      await placeOrder.mutateAsync({
+      const orderId = await placeOrder.mutateAsync({
         items,
         subtotal,
         deliveryFee,
         deliveryAddress: address.trim(),
         phone: phone.trim(),
-        paymentMethod: "cash_on_delivery",
+        paymentMethod: method,
       });
-      clear();
-      router.replace("/checkout/success");
+
+      if (method === "card") {
+        const result = await pay({
+          orderId,
+          email: user?.email ?? "customer@marketdistrict.com",
+          amount: total,
+        });
+        if (result.status === "paid") {
+          clear();
+          router.replace("/checkout/success");
+        } else if (result.status === "cancelled") {
+          // Order exists but payment not completed — leave it pending, inform user.
+          setError("Payment was cancelled. Your order is saved as pending.");
+        } else {
+          router.replace("/checkout/failed");
+        }
+      } else {
+        clear();
+        router.replace("/checkout/success");
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not place order. Try again.");
+    } finally {
+      setBusy(false);
     }
   }
+
+  const working = busy || placeOrder.isPending || isPaying;
+  const ctaLabel = isPaying
+    ? "Opening payment…"
+    : working
+      ? "Placing order…"
+      : `Place order · ${formatCurrency(total)}`;
 
   return (
     <View className="flex-1 bg-surface">
@@ -106,31 +140,29 @@ export default function CheckoutScreen() {
           {/* Payment method */}
           <View className="mt-4 rounded-2xl bg-white p-4">
             <Text className="mb-3 text-base font-bold text-gray-900">Payment method</Text>
-            <View className="flex-row items-center gap-3 rounded-xl border-2 border-primary bg-primary/5 p-3">
-              <View className="h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-                <Banknote size={20} color={colors.primary} />
-              </View>
-              <View className="flex-1">
-                <Text className="text-sm font-semibold text-gray-900">Cash on delivery</Text>
-                <Text className="text-xs text-gray-500">Pay when your order arrives</Text>
-              </View>
-              <View className="h-5 w-5 items-center justify-center rounded-full bg-primary">
-                <View className="h-2 w-2 rounded-full bg-white" />
-              </View>
-            </View>
-            <Text className="mt-2 text-xs text-gray-400">
-              Card & mobile money payments coming soon.
-            </Text>
+
+            <PayOption
+              selected={method === "card"}
+              onPress={() => setMethod("card")}
+              icon={<CreditCard size={20} color={colors.primary} />}
+              title="Pay with card"
+              subtitle="Card or mobile money via Paystack"
+            />
+            <View className="h-3" />
+            <PayOption
+              selected={method === "cash_on_delivery"}
+              onPress={() => setMethod("cash_on_delivery")}
+              icon={<Banknote size={20} color={colors.primary} />}
+              title="Cash on delivery"
+              subtitle="Pay when your order arrives"
+            />
           </View>
 
           {/* Summary */}
           <View className="mt-4 rounded-2xl bg-white p-4">
             <Text className="mb-2 text-base font-bold text-gray-900">Order summary</Text>
             <Row label={`Items (${items.length})`} value={formatCurrency(subtotal)} />
-            <Row
-              label="Delivery"
-              value={deliveryFee === 0 ? "Free" : formatCurrency(deliveryFee)}
-            />
+            <Row label="Delivery" value={deliveryFee === 0 ? "Free" : formatCurrency(deliveryFee)} />
             <View className="my-3 h-px bg-gray-100" />
             <View className="flex-row items-center justify-between">
               <Text className="text-base font-bold text-gray-900">Total</Text>
@@ -145,17 +177,54 @@ export default function CheckoutScreen() {
           <View className="px-5 py-3">
             <Pressable
               onPress={onPlaceOrder}
-              disabled={placeOrder.isPending}
+              disabled={working}
               className="h-14 items-center justify-center rounded-2xl bg-primary active:opacity-90"
+              style={working ? { opacity: 0.7 } : undefined}
             >
-              <Text className="text-base font-bold text-white">
-                {placeOrder.isPending ? "Placing order…" : `Place order · ${formatCurrency(total)}`}
-              </Text>
+              <Text className="text-base font-bold text-white">{ctaLabel}</Text>
             </Pressable>
           </View>
         </SafeAreaView>
       </KeyboardAvoidingView>
     </View>
+  );
+}
+
+function PayOption({
+  selected,
+  onPress,
+  icon,
+  title,
+  subtitle,
+}: {
+  selected: boolean;
+  onPress: () => void;
+  icon: React.ReactNode;
+  title: string;
+  subtitle: string;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      className={`flex-row items-center gap-3 rounded-xl border-2 p-3 ${
+        selected ? "border-primary bg-primary/5" : "border-gray-200 bg-white"
+      }`}
+    >
+      <View className="h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+        {icon}
+      </View>
+      <View className="flex-1">
+        <Text className="text-sm font-semibold text-gray-900">{title}</Text>
+        <Text className="text-xs text-gray-500">{subtitle}</Text>
+      </View>
+      <View
+        className={`h-5 w-5 items-center justify-center rounded-full ${
+          selected ? "bg-primary" : "border-2 border-gray-300"
+        }`}
+      >
+        {selected ? <View className="h-2 w-2 rounded-full bg-white" /> : null}
+      </View>
+    </Pressable>
   );
 }
 
