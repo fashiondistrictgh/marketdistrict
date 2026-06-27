@@ -78,7 +78,7 @@ export function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
                   strokeWidth={focused ? 2.6 : 2}
                 />
                 {badge > 0 ? (
-                  <View className="absolute -right-0.5 -top-0.5 h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1">
+                  <View className="absolute -right-0.5 -top-0.5 h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1">
                     <Text className="text-[10px] font-bold text-white">{badge}</Text>
                   </View>
                 ) : null}

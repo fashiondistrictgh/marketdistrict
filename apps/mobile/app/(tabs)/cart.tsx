@@ -2,10 +2,11 @@ import { Pressable, ScrollView, Text, View } from "react-native";
 import { router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { ShoppingCart } from "lucide-react-native";
+import { ArrowLeft, ShoppingCart } from "lucide-react-native";
 import { formatCurrency } from "@/shared";
 
 import { CartItem } from "@/components/cart/CartItem";
+import { Spinner } from "@/components/common/Loader";
 import { useCartStore } from "@/store/cart-store";
 import { colors } from "@/constants/colors";
 
@@ -14,21 +15,44 @@ const FREE_DELIVERY_THRESHOLD = 100;
 
 export default function CartScreen() {
   const items = useCartStore((s) => s.items);
+  const hydrated = useCartStore((s) => s.hydrated);
   const subtotal = useCartStore((s) => s.subtotal());
   const clear = useCartStore((s) => s.clear);
 
   const deliveryFee = subtotal >= FREE_DELIVERY_THRESHOLD || subtotal === 0 ? 0 : DELIVERY_FEE;
   const total = subtotal + deliveryFee;
 
+  function CartHeader() {
+    return (
+      <SafeAreaView edges={["top"]} className="bg-white">
+        <View className="flex-row items-center gap-3 px-4 pb-3 pt-2">
+          <Pressable onPress={() => router.push("/(tabs)/home")} hitSlop={8}>
+            <ArrowLeft size={24} color="#111827" />
+          </Pressable>
+          <Text className="text-2xl font-bold text-gray-900">Cart</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // Wait for the persisted cart to load before deciding empty vs filled.
+  if (!hydrated) {
+    return (
+      <View className="flex-1 bg-surface">
+        <StatusBar style="dark" />
+        <CartHeader />
+        <View className="flex-1 items-center justify-center">
+          <Spinner />
+        </View>
+      </View>
+    );
+  }
+
   if (items.length === 0) {
     return (
       <View className="flex-1 bg-surface">
         <StatusBar style="dark" />
-        <SafeAreaView edges={["top"]} className="bg-white">
-          <View className="px-5 pb-3 pt-2">
-            <Text className="text-2xl font-bold text-gray-900">Cart</Text>
-          </View>
-        </SafeAreaView>
+        <CartHeader />
         <View className="flex-1 items-center justify-center px-10">
           <View className="mb-4 h-20 w-20 items-center justify-center rounded-full bg-primary/10">
             <ShoppingCart size={36} color={colors.primary} />

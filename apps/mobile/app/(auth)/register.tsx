@@ -22,20 +22,31 @@ export default function RegisterScreen() {
   const { signUp } = useAuth();
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  function normalizePhone(raw: string): string {
+    let p = raw.replace(/[\s-()]/g, "");
+    if (p.startsWith("+233")) p = "0" + p.slice(4);
+    else if (p.startsWith("233")) p = "0" + p.slice(3);
+    return p;
+  }
+
   async function onSubmit() {
     if (fullName.trim().length < 2) return setError("Please enter your full name.");
     if (!isEmail(email)) return setError("Please enter a valid email address.");
+    const normPhone = normalizePhone(phone);
+    if (!/^0\d{9}$/.test(normPhone))
+      return setError("Enter a valid Ghana phone number (e.g. 024 123 4567).");
     if (password.length < 6) return setError("Password must be at least 6 characters.");
     if (password !== confirm) return setError("Passwords do not match.");
 
     setLoading(true);
     setError(null);
-    const { error: authError } = await signUp(email.trim(), password, fullName.trim());
+    const { error: authError } = await signUp(email.trim(), password, fullName.trim(), normPhone);
     setLoading(false);
     if (authError) return setError(getErrorMessage(authError));
     router.replace("/(tabs)/home");
@@ -73,6 +84,14 @@ export default function RegisterScreen() {
             value={email}
             onChangeText={setEmail}
             placeholder="you@example.com"
+          />
+          <AppInput
+            label="Phone number"
+            autoComplete="tel"
+            keyboardType="phone-pad"
+            value={phone}
+            onChangeText={setPhone}
+            placeholder="024 123 4567"
           />
           <AppInput
             label="Password"

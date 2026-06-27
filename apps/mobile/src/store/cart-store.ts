@@ -6,6 +6,7 @@ import { calcSubtotal } from "@/shared";
 
 interface CartState {
   items: CartLine[];
+  hydrated: boolean;
   addItem: (line: Omit<CartLine, "quantity">, quantity?: number) => void;
   removeItem: (productId: string) => void;
   setQuantity: (productId: string, quantity: number) => void;
@@ -18,6 +19,7 @@ export const useCartStore = create<CartState>()(
   persist(
     (set, get) => ({
       items: [],
+      hydrated: false,
 
       addItem: (line, quantity = 1) =>
         set((state) => {
@@ -57,6 +59,9 @@ export const useCartStore = create<CartState>()(
       name: "md.cart",
       storage: createJSONStorage(() => AsyncStorage),
       partialize: (state) => ({ items: state.items }),
+      onRehydrateStorage: () => (state) => {
+        if (state) state.hydrated = true;
+      },
     },
   ),
 );

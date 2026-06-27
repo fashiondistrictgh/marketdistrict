@@ -5,12 +5,14 @@ import { LinearGradient } from "expo-linear-gradient";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Bell, MapPin, Search } from "lucide-react-native";
+import Animated, { FadeInDown } from "react-native-reanimated";
 
 import { ProductCard } from "@/components/products/ProductCard";
 import { ProductCardSkeleton } from "@/components/products/ProductCardSkeleton";
 import { PromoCarousel } from "@/components/home/PromoCarousel";
 import { useProducts } from "@/hooks/useProducts";
 import { useCategories } from "@/hooks/useCategories";
+import { useUnreadCount } from "@/hooks/useActivity";
 import { useAuthStore } from "@/store/auth-store";
 import { colors } from "@/constants/colors";
 
@@ -33,6 +35,8 @@ export default function HomeScreen() {
   const user = useAuthStore((s) => s.user);
   const { data: products = [], isLoading, refetch, isRefetching } = useProducts();
   const { data: categories = [], refetch: refetchCategories } = useCategories();
+
+  const unread = useUnreadCount();
 
   function onRefresh() {
     refetch();
@@ -64,8 +68,16 @@ export default function HomeScreen() {
                   <Text className="text-base font-semibold text-white">Home</Text>
                 </View>
               </View>
-              <Pressable className="h-10 w-10 items-center justify-center rounded-full bg-white/15">
+              <Pressable
+                onPress={() => router.push("/profile/notifications")}
+                className="h-10 w-10 items-center justify-center rounded-full bg-white/15"
+              >
                 <Bell size={20} color="#fff" />
+                {unread > 0 ? (
+                  <View className="absolute -right-0.5 -top-0.5 h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1">
+                    <Text className="text-[10px] font-bold text-white">{unread}</Text>
+                  </View>
+                ) : null}
               </Pressable>
             </View>
 
@@ -100,12 +112,12 @@ export default function HomeScreen() {
         }
       >
         {/* Promo slideshow (above categories) */}
-        <View className="mt-5">
+        <Animated.View entering={FadeInDown.delay(80).duration(450)} className="mt-5">
           <PromoCarousel />
-        </View>
+        </Animated.View>
 
         {/* Categories — pill chips */}
-        <View className="mt-6">
+        <Animated.View entering={FadeInDown.delay(180).duration(450)} className="mt-6">
           <SectionHeader title="Categories" onPress={() => router.push("/(tabs)/categories")} />
           <ScrollView
             horizontal
@@ -128,7 +140,7 @@ export default function HomeScreen() {
               </Pressable>
             ))}
           </ScrollView>
-        </View>
+        </Animated.View>
 
         {/* New arrivals (newest first) */}
         {newArrivals.length > 0 ? (

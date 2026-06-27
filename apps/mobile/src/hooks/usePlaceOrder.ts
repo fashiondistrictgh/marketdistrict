@@ -71,6 +71,7 @@ export function usePlaceOrder() {
       }
 
       qc.invalidateQueries({ queryKey: ["orders"] });
+      qc.invalidateQueries({ queryKey: ["activity"] });
       return orderId;
     },
   });

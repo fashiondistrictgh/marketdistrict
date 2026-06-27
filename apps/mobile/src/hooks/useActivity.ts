@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ORDER_STATUS_LABELS, timeAgo, type OrderStatus } from "@/shared";
 
 import { supabase } from "@/lib/supabase";
+import { useNotificationsStore } from "@/store/notifications-store";
 
 export interface ActivityItem {
   id: string;
@@ -27,6 +28,11 @@ const KIND_BY_STATUS: Record<OrderStatus, ActivityItem["kind"]> = {
 export function useActivity() {
   return useQuery({
     queryKey: ["activity"],
+    // Keep the feed fresh so newly placed orders / admin status changes appear
+    // without a manual refresh.
+    staleTime: 0,
+    refetchInterval: 30_000,
+    refetchOnWindowFocus: true,
     queryFn: async (): Promise<ActivityItem[]> => {
       const { data, error } = await supabase
         .from("orders")
@@ -49,7 +55,8 @@ export function useActivity() {
         const status = o.status;
         const placed = status === "pending";
         return {
-          id: o.id,
+          // id encodes the status so each status change is its own notification.
+          id: `${o.id}:${status}`,
           kind: KIND_BY_STATUS[status] ?? "placed",
           title: placed ? "Order placed" : `Order ${ORDER_STATUS_LABELS[status]}`,
           body: placed
@@ -60,4 +67,11 @@ export function useActivity() {
       });
     },
   });
+}
+
+/** Number of activity items the user hasn't seen yet (for the bell badge). */
+export function useUnreadCount(): number {
+  const { data: activity = [] } = useActivity();
+  const seenIds = useNotificationsStore((s) => s.seenIds);
+  return activity.filter((a) => !seenIds.includes(a.id)).length;
 }

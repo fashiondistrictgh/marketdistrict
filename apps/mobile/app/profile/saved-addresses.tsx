@@ -13,21 +13,34 @@ import {
 import { Stack, router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { ArrowLeft, MapPin, Plus, Trash2 } from "lucide-react-native";
+import { ArrowLeft, LocateFixed, MapPin, Plus, Trash2 } from "lucide-react-native";
 
 import { useAddresses, useAddAddress, useDeleteAddress } from "@/hooks/useAddresses";
+import { useCurrentLocation } from "@/hooks/useCurrentLocation";
 import { colors } from "@/constants/colors";
 
 export default function SavedAddressesScreen() {
   const { data: addresses = [], isLoading } = useAddresses();
   const addAddress = useAddAddress();
   const deleteAddress = useDeleteAddress();
+  const { detect, loading: locating } = useCurrentLocation();
 
   const [modalOpen, setModalOpen] = useState(false);
   const [label, setLabel] = useState("");
   const [line1, setLine1] = useState("");
   const [city, setCity] = useState("");
   const [error, setError] = useState<string | null>(null);
+
+  async function onUseLocation() {
+    setError(null);
+    const detected = await detect();
+    if (detected) {
+      setLine1(detected.line1);
+      setCity(detected.city);
+    } else {
+      setError("Couldn't get your location. Enter it manually.");
+    }
+  }
 
   async function onSave() {
     if (line1.trim().length < 4) return setError("Please enter the street/house details.");
@@ -127,6 +140,18 @@ export default function SavedAddressesScreen() {
         >
           <View className="rounded-t-3xl bg-white p-5">
             <Text className="mb-4 text-lg font-bold text-gray-900">New address</Text>
+
+            <Pressable
+              onPress={onUseLocation}
+              disabled={locating}
+              className="mb-4 h-11 flex-row items-center justify-center gap-2 rounded-xl bg-primary/10 active:opacity-80"
+            >
+              <LocateFixed size={18} color={colors.primary} />
+              <Text className="font-semibold text-primary">
+                {locating ? "Detecting location…" : "Use my current location"}
+              </Text>
+            </Pressable>
+
             <Field label="Label (e.g. Home, Office)" value={label} onChangeText={setLabel} placeholder="Home" />
             <Field
               label="Street / house number / area"

@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { ActivityIndicator, ScrollView, Text, View } from "react-native";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
@@ -5,6 +6,7 @@ import { Bell, CheckCircle2, Package, Truck, XCircle } from "lucide-react-native
 
 import { StackHeader } from "@/components/common/StackHeader";
 import { useActivity, type ActivityItem } from "@/hooks/useActivity";
+import { useNotificationsStore } from "@/store/notifications-store";
 import { colors } from "@/constants/colors";
 
 const ICON: Record<ActivityItem["kind"], React.ComponentType<{ size?: number; color?: string }>> = {
@@ -17,6 +19,12 @@ const ICON: Record<ActivityItem["kind"], React.ComponentType<{ size?: number; co
 
 export default function NotificationsScreen() {
   const { data: activity = [], isLoading } = useActivity();
+  const markAllSeen = useNotificationsStore((s) => s.markAllSeen);
+
+  // Mark everything seen when the screen opens (clears the bell badge).
+  useEffect(() => {
+    if (activity.length > 0) markAllSeen(activity.map((a) => a.id));
+  }, [activity, markAllSeen]);
 
   return (
     <View className="flex-1 bg-surface">
