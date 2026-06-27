@@ -33,6 +33,8 @@ export function useActivity() {
     staleTime: 0,
     refetchInterval: 30_000,
     refetchOnWindowFocus: true,
+    refetchOnMount: "always",
+    retry: 2,
     queryFn: async (): Promise<ActivityItem[]> => {
       const { data, error } = await supabase
         .from("orders")

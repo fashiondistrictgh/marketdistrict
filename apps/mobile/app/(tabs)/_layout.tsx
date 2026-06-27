@@ -6,7 +6,10 @@ export default function TabsLayout() {
   return (
     <Tabs
       tabBar={(props) => <FloatingTabBar {...props} />}
-      screenOptions={{ headerShown: false }}
+      screenOptions={{
+        headerShown: false,
+        animation: "fade",
+      }}
     >
       <Tabs.Screen name="home" />
       <Tabs.Screen name="categories" />

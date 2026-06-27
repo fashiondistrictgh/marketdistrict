@@ -71,7 +71,19 @@ export default function LoginScreen() {
   }
 
   function setDigit(i: number, v: string) {
-    const d = v.replace(/[^0-9]/g, "").slice(-1);
+    const cleaned = v.replace(/[^0-9]/g, "");
+
+    // SMS autofill / paste: a whole code lands in one box — spread it across all.
+    if (cleaned.length > 1) {
+      const next = Array(OTP_LENGTH).fill("");
+      cleaned.slice(0, OTP_LENGTH).split("").forEach((c, idx) => (next[idx] = c));
+      setDigits(next);
+      const last = Math.min(cleaned.length, OTP_LENGTH) - 1;
+      inputs.current[last]?.focus();
+      return;
+    }
+
+    const d = cleaned.slice(-1);
     setDigits((prev) => {
       const next = [...prev];
       next[i] = d;
@@ -155,7 +167,9 @@ export default function LoginScreen() {
                         inputs.current[i - 1]?.focus();
                     }}
                     keyboardType="number-pad"
-                    maxLength={1}
+                    textContentType={i === 0 ? "oneTimeCode" : "none"}
+                    autoComplete={i === 0 ? "sms-otp" : "off"}
+                    maxLength={i === 0 ? OTP_LENGTH : 1}
                     className="h-14 w-12 rounded-xl border border-gray-200 bg-white text-center text-xl font-bold text-gray-900"
                   />
                 ))}

@@ -57,8 +57,9 @@ export default function HomeScreen() {
     addresses.find((a) => a.id === selectedId) ??
     addresses.find((a) => a.isDefault) ??
     addresses[0];
+  // Show the actual area/place (e.g. "Madina, Accra"), not the label ("Home").
   const deliverLabel = activeAddress
-    ? `${activeAddress.label ?? activeAddress.line1}`
+    ? [activeAddress.line1, activeAddress.city].filter(Boolean).join(", ")
     : "Set delivery address";
 
   return (
