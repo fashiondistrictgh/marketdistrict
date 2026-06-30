@@ -45,9 +45,13 @@ export default function LoginScreen() {
     return () => clearTimeout(t);
   }, [resendIn]);
 
+  // `phone` holds only the 9 local digits (after +233). Backend wants 0XXXXXXXXX.
+  const localTo0 = (nineDigits: string) => "0" + nineDigits;
+  const phoneValid = /^\d{9}$/.test(phone);
+
   async function onSendOtp() {
-    const norm = normalizePhone(phone);
-    if (!/^0\d{9}$/.test(norm)) return setError("Enter a valid phone number (e.g. 024 123 4567).");
+    if (!phoneValid) return setError("Enter your 9-digit number after +233.");
+    const norm = normalizePhone(localTo0(phone));
     setLoading(true);
     setError(null);
     try {
@@ -98,7 +102,7 @@ export default function LoginScreen() {
     setLoading(true);
     setError(null);
     try {
-      await verifyOtp(normalizePhone(phone), code);
+      await verifyOtp(normalizePhone(localTo0(phone)), code);
       router.replace("/(tabs)/home");
     } catch (e) {
       setError(getErrorMessage(e));
@@ -129,16 +133,34 @@ export default function LoginScreen() {
           {step === "phone" ? (
             <>
               <AuthHeader title="Welcome back" subtitle="Sign in with your phone number" />
-              <AppInput
-                label="Phone number"
-                autoComplete="tel"
-                keyboardType="phone-pad"
-                value={phone}
-                onChangeText={setPhone}
-                placeholder="024 123 4567"
-              />
+
+              <Text className="mb-1.5 text-sm font-medium text-gray-700">Phone number</Text>
+              <View className="mb-1 flex-row items-center">
+                <View className="h-12 flex-row items-center rounded-l-xl border border-r-0 border-gray-200 bg-gray-50 px-3">
+                  <Text className="text-base font-semibold text-gray-700">🇬🇭 +233</Text>
+                </View>
+                <TextInput
+                  value={phone}
+                  onChangeText={(v) => setPhone(v.replace(/\D/g, "").slice(0, 9))}
+                  placeholder="24 123 4567"
+                  placeholderTextColor="#9ca3af"
+                  keyboardType="number-pad"
+                  autoComplete="tel"
+                  maxLength={9}
+                  className="h-12 flex-1 rounded-r-xl border border-gray-200 bg-white px-4 text-base text-gray-900"
+                />
+              </View>
+              <Text className="mb-3 text-xs text-gray-400">
+                Enter the 9 digits after +233 ({phone.length}/9)
+              </Text>
+
               {error ? <Text className="mb-3 text-sm text-red-500">{error}</Text> : null}
-              <AppButton label="Send code" loading={loading} onPress={onSendOtp} />
+              <AppButton
+                label="Send code"
+                loading={loading}
+                disabled={!phoneValid}
+                onPress={onSendOtp}
+              />
 
               <View className="mt-6 flex-row items-center justify-center">
                 <Text className="text-sm text-gray-500">New here? </Text>
@@ -151,7 +173,7 @@ export default function LoginScreen() {
             <>
               <AuthHeader
                 title="Enter code"
-                subtitle={`We sent a 6-digit code to ${phone}`}
+                subtitle={`We sent a 6-digit code to +233 ${phone}`}
               />
               <View className="mb-6 flex-row justify-between">
                 {digits.map((d, i) => (
